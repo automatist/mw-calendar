@@ -1,19 +1,18 @@
 <!-- 
-* Readme.txt - 1/6/2009
+* Readme.txt - 12/13/2008
 * Place this data in a wiki page and link with your calendar
 * Calendar Help information
 * Contact: Eric Fortin: kenyu73@gmail.com
 * MediaWiki: http://www.mediawiki.org/wiki/User:Kenyu73/Calendar
 -->
 __TOC__
-==Setup (v3.4.2)==
+==Setup==
+# It's recommended to create a page in a "CalendarEvents" namespace, however its not required.
+#* The easist way is to enter "CalendarEvents:My Calendar Name" in the search box to create the main base calendar page.
+# Add a <nowiki><calendar /></nowiki> extension tag to the newly create page (or existing page)
+# Add parameters as required (see below listing)
 
-* It's recommended to create a custom calendar type Namespace, like '''Calendars''', but can be whatever Namespaces defined in LocalSettings.php or standard MediaWiki namespaces (like user namespaces) however, it's not required. It is recommended though so seaches in the main wiki do not included calendar events.
-** The easist way is to enter "Calendars:My Calendar Name" in the search box to create the main base calendar page.
-* Add a <nowiki><calendar /></nowiki> extension tag to the newly create page (or existing page)
-* Add parameters as required (see below listing)
-
-Note: You can have more then one calendar per page. It's fun to find unique combinations of how to use "full" calendar view and "day" only view. Don't forget, since this is a tagged extension, you could always wrap the calendar in a table to shrink it down or justify it...
+Note: You can have more then one calendar per page. It's fun to find unique combinations of how to use "full" calendar view and "day" only view. Don't forget, since this is a tagged extension, you always wrap the calendar in a table to scrink it down or justify it...
 
 
 The calendar has many advanced features; below is a simple basic way to setup the calendar. This calendar will create a standard calendar named "Public" if no name parameter is given, but it's recommended that, at minimun, you create a 'name' parameter. This will give you a good all around full featured calendar. Read and use the advanced parameters at you own risk! :)
@@ -22,122 +21,92 @@ The calendar has many advanced features; below is a simple basic way to setup th
  <nowiki><calendar name="Team Calendar" /> </nowiki>
 
 <div style="color:red">'''Important:'''</div>
-To gain the ability of Parent/Subpage linking, place the calender in an existing namespace ([[Help:Namespaces]]) or create a new one. Create a wiki page as shown above and then add your calendar extension tag to that page. This will populate a "quick" shortcut link back to the calendar after the event is entered and saved. The calendar will still work fine if not added to a namespace, but you will not get a "quick link" back to the main calender page.<br/>
-[[image:namespaces example.gif]]
+To gain the ability of Parent/Subpage linking, place the calender in a "CalendarEvents:" namespace. Create a wiki page as shown above and then add your calendar extension tag to that page. This will populate a "quick" shortcut link back to the calendar after the event is entered and saved. The calendar will still work fine if not added to the "CalendarEvents:" namespace, but you will not get a "quick link" back to the main calender page.
 
 
 
-The following are examples of how an ('''Namespace:Page/Name/EventDate''') event will look:
+The following are examples of how the ('''Page/Name/EventDate''') event will look:
 
  <nowiki><calendar name="Sales" /></nowiki>
-     '''Calendars:Acme Company/Sales/12-1-2008 -Event 1'''
+     '''CalendarEvents:Acme Company/Sales/12-1-2008 -Event 1'''
 
  <nowiki><calendar name="Support" /></nowiki>
-     '''Calendars:Acme Company/Support/12-1-2008 -Event 1'''
+     '''CalendarEvents:Acme Company/Support/12-1-2008 -Event 1'''
 
-=== Sharing Calendars ===
-You can also "share" or subscribe to other calendars by using the "''subscribe''" or "''fullsubscribe''" parameter. This will create a calendar of your own, but you'll also have all the events listed from "Sales". Remember to use the full "wiki page/calendar name" format. Be sure to include ''usetemplates'' or other special parameters in your calendar if the subscibed calendar uses them.
- '''Namespace not used:'''
+You can also "share" or subscribe to other calendars by using the "''subscribe''" or "''fullsubscribe''" parameter. This will create a calendar of your own, but you'll also have all the events listed from "Sales". Remember to use the full "wiki page/calendar name" format
  <nowiki><calendar name="Support" subscribe="Acme Company/Sales" /></nowiki>
 
- '''Namespace is used:'''
- <nowiki><calendar name="Support" subscribe="Calendars:Acme Company/Sales" /></nowiki>
 
-=== Parameters ===
-Please use quotes for any parameter that may contain a space
+ 
+=== ===
 {| border=1 cellpadding="5"
 ! Parameters
 ! Description
 ! Example
 ! Default
 |-
-|'''name=<"value">'''
-|Name of your calendar
+|'''name'''
+|Name of your calendar.<br/> ''Note'': Calendars with the same name share events.
 |name="Family Events"
 |Public
-|-
-|'''useconfigpage'''
-|Use alot of parameters? Use the config page instead. Enter each parameter followed by the enter key into the config page. The ''disablelink'' option removes the btn and text links to the config page. You can use the config page and <calendar /> options together, but the <calendar /> options overwrites the ''config page'' options.
-|useconfigpage<br/>useconfigpage=disablelink
-|off
 |-
 |'''usetemplates'''
 |Allows the use of one page to add events 
 |usetemplates
-|disabled
-|-
-|'''locktemplates'''
-|disables the template button and template links; template events remain visable
-|locktemplates
-|off
+|off - no templates 
 |-
 |'''defaultedit'''
 |Default events to "edit mode" when clicked
 |defaultedit
-|off - page view
+|off - "page mode" view
 |-
 |'''disableaddevent'''
 |prevents the "Add Event" tag from being displayed
-|disableaddevent
-|enabled
+|disableaddevent (<s>noadd</s>)
+| enabled
 |-
-|'''yearoffset=<value>'''
+|'''yearoffset'''
 |Sets the year dropdown +/- value
-|yearoffset=3
-|2  (+/- years)
+|yearoffset="3"
+|2 - +/- years
 |-
-|'''date=<value>'''
-|Show calendar for a certain date.<br />Values can be: '''today''', '''tomorrow''' or a '''datevalue'''
+|'''date'''
+|Show calendar for a certain date.<br />values can be: '''today''', '''tomorrow''' or '''datestamp'''
 |date="tomorrow" or date="1-1-2010"
-|off - normal month view
+|normal month view
 |-
-|'''useeventlist=<value>'''
-|Enabling this displays a vertical list of all events within a defined amount of days. This hits the db alot as it must search events for every single day in the amount of days defined... I have the code limited to 120 days, but use the least days needed.
-|useeventlist=30
-|disabled
-|-
-|'''charlimit=<value>'''
-|Sets the calendar eventname max length
-|charlimit=30
+|'''charlimit'''
+|Sets the calendar event charactor limit length. The default is 20
+|charlimit="30"
 |20 charactors
 |-
-|'''enablesummary=<value>'''
-|Enables event summaries to display below the eventname; value is max character length
-|enablesummary=100
-|disabled
-|-
-|'''subscribe=<"value">'''
-|Allows the calendar to subscribe to existing events from other calendar(s); subscribe to additional calendars delimited by a comma; ''add events'' go to '''your''' calendar only
-|subscribe="Main Page/Company Calendar, Tech Group/Training Calendar"
+|'''subscribe'''
+|Allows the calendar to subscribe to existing events from the subscribed calendar; 'add events' go to your local calendar only
+|subscribe="''Tech Group/Company Calendar''"
 |not subscribed
 |-
-|'''fullsubscribe=<"value">'''
-|Allows the calendar to subscribe impersonate another calendar; ''add events'' go to the subscribed calendar '''only'''; you can use ''subscribe'' mode if needed as well
-|fullsubscribe="Tech Group/Team Calendar"
-|not subscribed
+|'''fullsubscribe'''
+|Your calendar only accesses the subscribed calendars events; 'add events' go to the subscribed calendar
+|fullsubscribe="''Tech Group/Team Calendar''"
+|off - 'add event' creates new events to the local calendar only; subscribed events link to the subscribed calendar
 |-
 |'''disablelinks'''
-|removes the ability to click/edit an existing event; use 'locktemplates' to disable template created links
+|removes the ability to click/edit an existing event
 |disablelinks
 |off - allow links/edits
 |-
 |'''usemultievent'''
-|clicking 'add event' opens the last entered event; you must place each event title in ==event1==, ==event2== multiple event formatting as describle later in this help. An "''alert!''" link will display for each day that needs to be updated.
+|clicking 'add event' opens the last entered event; you must place each event title in ==event1==, ==event2== multiple event formatting as describle in this help. An "alert!" link (triggers js popup) will display for each day that need to be updated.
 |usemultievent
-|disabled - 'add event' creates new event pages
+|false - 'add event' creates new event pages
 |-
-|'''maxdailyevents=<value>'''
-|Set the limit of how many "add event" unique pages are created; this doesn't include ''template'' or ''==event=='' type entries
-|maxdailyevents=5
-|5 events
-|-
-|'''disablestyles'''
-|Disable the 'event style' button and disables keyword styling; inline syles are not effected
-|disablestyles
-|enabled, but does ''nothing'' until keyword styles are added
+|'''useeventlist'''
+|Enabling this displays a vertical list of all events within a defined amount of days. This hits the db alot as it must search events for every single day in the amount of days defined... the code is limits the max to 120 days, but use the least days needed.
+|useeventlist="30"
+|off - 
 |-
 |'''lockdown'''
-|Basically puts the calendar into a read-only state; this includes 'disableaddevent', 'disablelinks' and 'locktemplates'
+|this includes 'noadd' and 'disablelinks'... no parameter needed
 |lockdown
 |false - no lockdown
 |}
@@ -168,54 +137,49 @@ The template button (if enabled) allows users to add a bunch of events into one 
 The day and the event '''must''' be seperated by an '#' as shown in the example. You can also create duplicated days. The days do not have to be in order
 
  <nowiki>
-1# red::Vacation
+1# Vacation
 2# Holiday
 7# Election Day
 7# Office Closed
 31# Half Day
 19# Appointment
-20-25# Hiking Trip <-- multiple day event
 </nowiki>
 
-=== Colors and Formatting ===
-# The calendar supports most of the basic MediaWiki text/font properties including the 'ticks' for italic and bold.
-#* <nowiki>'''<font color=red>vacation</font>'''</nowiki>
-#* <span style="color:red;background:yellow">Vacation time!!</span> --> <nowiki><span style="color:red;background:yellow">Vacation time!!</span></nowiki>
-# Setup the ''event style''' page by adding as many 'styles' as you wish. These styles are based on keyword matches, so be wary of what words you choose... The styles follow standard html/css style properties.
-#* '''syntax:''' keyword:: style1; style2; etc
-#** myStyle:: color:green; text-decoration:line-through; --> <s><span style="color:green">Whatever</span></s>
-#** birthday:: color:red; font-style: bold; --> '''<font color=red>My Birthday</font>'''
-#** sick:: color: green;background-color: yellow --> <span style="color:green;background-color:yellow">Out Sick today</span> <br/>
-#** vacation:: color: red; font-style: italic --> ''<font color=red>Vacation to Florida!</font>''<br/>
+=== Repeating Events ===
+To scheduled a repeating event, you need to enable templates by adding the (usetemplates="1") parameter. You can then add a repeating event using the following syntax to schedule the 1st to the 10th as a vacation:
+ 1-10#Vacation
 
+=== Colors ===
+You can prefix events as shown in the examples to add custom colors to the calendar events: syntax: <textcolor::bg-color::EventName>
+ Standard Event: red::Eric's Vacation
+ Template Event: 1-10# red::Eric's Vacation
+ Multi Event: 
+    == red::Eric's Vacation ==
+    == green::Christmas ==
 
-I'm not sure how far and how many variation of the css and/or Wiki formatting will go, but I've tested a good portion of the standard text properties. (<nowiki><div></nowiki> is giving me an issue at this time though... but <nowiki><span></nowiki> works just fine!)
+You can also create text background as follows:
+ Standard Event: red::green::Eric's Vacation
+ Template Event: 1-10# ::green::Eric's Vacation (default text color)
+ Multi Event: 
+    == red::green::Eric's Vacation ==
+    == ::green::Christmas == (default text color)
 
 == Installation ==
 The following are details of the administrator installation of this calendar extension. If you dont have any custom Namespaces, then 100 and 101 are fine, if you do have existing custom Namespaces, just bump the numbers up accordingly. See [http://www.mediawiki.org/wiki/Help:Namespaces Help:Namespaces] for more information. The $wgNamespacesWithSubpages values must match the values assigned to the $wgExtraNamespaces.
- '''Recommended Folder Path:''' /extensions/Calendar
-'''Localsettings.php:'''<br/>
-<br/>
-''Simple'':
- require_once("$IP/extensions/Calendar/Calendar.php");<br/>
- 
-''Recommended'':
+ '''Folder Path:''' /extensions/Calendar
+'''Localsettings.php:''' 
  require_once("$IP/extensions/Calendar/Calendar.php");<br/>
  
  // Puts events into their own namesspace/group (not included in 'main' searches... etc)
- $wgExtraNamespaces[100] = "Calendars";
- $wgExtraNamespaces[101] = "Calendars_talk";
- //''Note: 'Calendars' is an example, please feel free to use whatever name you wish''
+ $wgExtraNamespaces[100] = "CalendarEvents";
+ $wgExtraNamespaces[101] = "CalendarEvents_talk";
  
  // Puts the events into Subpages (allows a quick link back to primary calendar)
  $wgNamespacesWithSubpages[100] = true;
  $wgNamespacesWithSubpages[101] = true;
-The additional namespaces move all the events outside the "main" group... should clean the mess up some. If you have custom namespaces installed already, make sure you bump up the [100][101] values up accordingly.
+The additional namespaces move all the events outside the "main" group... should clean the mess up some. If you have custom namespaces installed already, make sure you change bump the [100][101] values up accordingly.
 
-'''''optional overrides'''''<br/>
-Add the following to ''LocalSettings.php'' to override the default path of 'extensions/Calendar'. This is used to read the ''calendar_template.html'' file.
- $wgCalendarPath = "/var/www/extensions/Calendar/";
+ '''''optional overrides'''''
+ $extensionPath = "/var/www/extensions/Calendar/";
         or
- $wgCalendarPath = "c:/extensions/";
-
-[[Extension:Calendar (Kenyu73)/Readme/beta | Beta Readme]]
+ $extensionPath = "c:\extensions\";
