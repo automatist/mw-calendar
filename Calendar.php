@@ -2,6 +2,7 @@
 
 /* Calendar.php
  *
+ ***** Verion 3.2 *****
  *
  * - Eric Fortin (12/14/2008) < kenyu73@gmail.com >
  *
@@ -15,6 +16,7 @@
  **** debugging: 
  *		The debugging events are written below the calendar web page.
  *			<calendar debug /> - basically, user defined debugging
+ *			<calendar debug=2 /> - writes all the $this->staticDebug data (all function calls included)
  * call the debugging by this means:   $this->debug(<data>);
  *
  * the debug log will show up on the calendar display page
@@ -94,14 +96,11 @@ function wfCalendarExtension() {
     $wgParser->setHook( "calendar", "displayCalendar" );
 }
 
-include ("CalendarArticles.php");
-
-class Calendar extends CalendarArticles
+class Calendar
 {  
-	var $version = "3.4.3 (beta)";
+	var $version = "v3.4.1 (1/3/2009)";
 	
     // [begin] set calendar parameter defaults
-	var $calendarMode = "normal";
 	var $title = ""; 
 	var $name = "Public";
 	var $enableTemplates = false;
@@ -111,18 +110,17 @@ class Calendar extends CalendarArticles
 	var $yearOffset= 2;
 	var $charLimit = 20; // this is the line char limit for listed events
 	var $maxDailyEvents = 5; // max number of events per day; this directly effects performace
-	var $summaryCharLimit = 0;
+	// [end] set calendar parameter defaults
 	
 	var $debugLevel = 0;
 	var $useMultiEvent = false;
+	var $dateEnabled = false;
 	var $useEventList = false;
 	var $disableLinks = false;
 	var $lockTemplates = false;
-	var $disableConfigLink = true;
-	var $disableStyles = false;
-	
 	var $arrAlerts = array();
 	var $subscribedPages = array();
+	var $arrTemplates = array();
 
 	// setup calendar arrays
     var $daysInMonth = array(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31);   
@@ -131,11 +129,8 @@ class Calendar extends CalendarArticles
                             "July", "August", "September", "October", "November", "December");
 
 						
-    function Calendar($wgCalendarPath, $wikiRoot, $debug) {
-
-		$this->wikiRoot = $wikiRoot;
-		$this->debugEnabled = $debug;
-		
+    function Calendar($wgCalendarPath) {
+		$this->debugEnabled = true; //enable then disable to capture class debugging
 		$this->startTime = $this->markTime = microtime(1);
 		$this->debug("Calendar Constructor Started.");		
 		
@@ -174,6 +169,7 @@ class Calendar extends CalendarArticles
 		$this->daysMissingHTML  = $this->html_week_array("<!-- Missing %s %s -->");
 		
 		$this->debug("Calendar Constructor Ended.");
+		$this->debugEnabled = false; //enable then disable to capture class debugging
     }
 	
 	function getAboutInfo(){
@@ -184,26 +180,43 @@ class Calendar extends CalendarArticles
 		
 	}
 // ******* BEGIN DEBUGGING CODE ******************
+	// write debug info to specified folder
+	// make sure the calendar folder has write privs
+	function debugToFile($e){
+		if($this->debugEnabled){
+			$wikiBasePath = $this->extensionPath . 'data.txt';
+			$fp = fopen($wikiBasePath, 'at');
+			fwrite($fp, $e . chr(10));
+			fclose($fp);	
+		}
+	}
+	
+	// stand debug calls (use then erase kinda calls)
 	function debug($e){
 		if($this->debugEnabled){
 			// recorded time in seconds
-			$steptime = round(microtime(1) - $this->markTime,2);
-			$totaltime = round(microtime(1) - $this->startTime,2);
-			$this->debugData .= "<tr><td>$e</td><td align=center>$steptime</td><td align=center>$totaltime</td></tr>";
+			$steptime = round(microtime(1) - $this->markTime,3);
+			$totaltime = round(microtime(1) - $this->startTime,3);
+			$this->debugData .= $e . " : " . $steptime . " (" . $totaltime . ")" .  chr(10) . "\n";
 			$this->markTime = microtime(1);
 		}
 	}
 	
-	// writes all the debug data at the bottom of calendar page
+	// set 'debug=2' in the calendar parameters to get 
+	// advanced debugging... ie: calls to staticDebugs...	
+	function staticDebug($e){
+		if($this->debugLevel == 2)
+			$this->debug($e);
+	}
+	
 	function getDebugging() { 
 		if($this->debugEnabled)
-			return "<table border=1 cellpadding=5 cellspacing=0 >
-			<tr><th>DebugName</th><th>StepTime<br>(sec)</th><th>TotalTime<br>(sec)</th></tr>
-			$this->debugData</table>";
+			return htmlspecialchars($this->debugData); 
 	}	
 // ******* END DEBUGGING CODE *****************
 	
     function html_week_array($format){
+		$this->staticDebug("function html_week_array");
 		
 		$ret = array();
 		for($i=0;$i<7;$i++){
@@ -215,7 +228,8 @@ class Calendar extends CalendarArticles
     }
 
     function getDaysInMonth($year,$month) {	// Leap year rule good through 3999
-
+		$this->staticDebug("function getDaysInMonth");
+	
         if ($month < 1 || $month > 12) return 0;
         $d = $this->daysInMonth[$month - 1];
         if ($month == 2 && $year%4==0) {
@@ -224,12 +238,47 @@ class Calendar extends CalendarArticles
 		}
         return $d;
     }
-	 
+	
+	//find the number of current events and "build" the <add event> link
+    function buildNewEvent($month, $day, $year) {
+		$this->staticDebug("function buildNewEvent (wiki db lookup)");
+		
+    	$articleName = "";    	// the name of the article to check for
+    	$articleCount = 1;    	// the article count
+		$stop = false;
+	
+		$tempArticle = $this->calendarPageName . "/" . $month . "-" . $day . "-" . $year . " -Event ";
+		$articleName = $tempArticle . $articleCount;
+		$article = new Article(Title::newFromText($articleName));		
+		
+		// dont care about the articles here, just need to get next available article
+		while ($article->exists() && !$stop) {
+			$displayText  = $article->fetchContent(0,false,false);
+			if(strlen($displayText) > 0){
+				$articleCount += 1;				
+				$articleName = $tempArticle . $articleCount;
+				$article = new Article(Title::newFromText($articleName));
+			}
+			else $stop = true;
+		}
+
+		// reuse events (need to used the ==event1== ==event2== logic)
+		if($this->useMultiEvent && $articleCount > 1) $articleCount -= 1;
+		
+		if($articleCount > $this->maxDailyEvents)
+			$newURL = "<a title='add a new event' href=\"javascript:alert('Max daily events reached. Please use \'Multiple Events\' fomatting to add more.')\"><u>Add Event</u></a>";
+		else
+			$newURL = "<a title='add a new event' href='" . $this->wikiRoot . urlencode($tempArticle . $articleCount) . "&action=edit'><u>Add Event</u></a>";
+
+		return $newURL;
+	}
+  
     // Generate the HTML for a given month
     // $day may be out of range; if so, give blank HTML
     function getHTMLForDay($month,$day,$year){
 		$tag_eventList= "";
 		
+		$this->staticDebug("function getHTMLForDay");
 		if ($day <=0 || $day > $this->getDaysInMonth($year,$month)){
 			return $this->daysMissingHTML[0];
 		}
@@ -249,25 +298,39 @@ class Calendar extends CalendarArticles
 					
 		// add event link value
 		if($this->showAddEvent){
-			$tag_addEvent = $this->buildAddEventLink($month, $day, $year);
+			$tag_addEvent = $this->buildNewEvent($month, $day,$year);
 		}
 		else {
 			$tag_addEvent = "";
 		}
+			
+		//load templates if enabled
+		if($this->enableTemplates){
+			$eventArticle = $this->getTemplateEvents($month, $day, $year);
+			if(strlen($eventArticle) > 0)
+				$tag_eventList .=  $eventArticle;
+		}
 
-		// build standard articles
-		$this->getArticlesForDay($month, $day, $year);
+		// event list tag
+		$events = $this->getArticlesForDay($month, $day, $year);
 
-		//build formatted event list
-		$tag_eventList = $this->getArticleLinks($month, $day, $year, true);
+		if (count($events) > 0) {
+			for ($k = 0; $k < count($events); $k++){
+				$summaries = $this->getSummariesForArticle($events[$k], $day, $month);
+				for($j = 0; $j < count($summaries); $j++){
+					if(strlen($summaries[$j]) > 0)
+						$tag_eventList .= "<li>" . $summaries[$j] . "</li>\n";
+				}
+			}
+		}	
 
 		// replace variable tags in the string
-		if($this->calendarMode == "date")
-			$tempString = str_replace("[[Day]]", "", $tempString); // remove the day number (1, 2, 3, ..., 31)
+		if($this->dateEnabled)
+			$tempString = str_replace("[[Day]]", "", $tempString);
 		else
 			$tempString = str_replace("[[Day]]", $day, $tempString);
 		
-		if(strlen($tag_eventList) > 0 && ($this->calendarMode == "eventlist")){
+		if(strlen($tag_eventList) > 0 && $this->useEventList){
 			$format = "<h4>" 
 			. $this->monthNames[$month -1] . " "
 			. $day . ", "
@@ -278,11 +341,7 @@ class Calendar extends CalendarArticles
 			
 		}else{	
 			$tag_alerts = $this->buildAlertLink($day, $month);
-			
-			//kludge... for some reason, the "\n" is removed in full calendar mode
-			if($this->calendarMode == "normal")
-				$tag_eventList = str_replace("\n", " ", $tag_eventList); 
-				
+
 			$tempString = str_replace("[[AddEvent]]", $tag_addEvent, $tempString);
 			$tempString = str_replace("[[EventList]]", "<ul>" . $tag_eventList . "</ul>", $tempString);
 			$tempString = str_replace("[[Alert]]", $tag_alerts, $tempString);
@@ -290,9 +349,65 @@ class Calendar extends CalendarArticles
 
 		return $tempString;
     }
+	
+	// when the calendar loads, we want to put all the template events into memory
+	// so we dont have to read the wiki db for every day
+	function buildTemplateInMemory($month, $year, $pagename){
+		$displayText = "";
+		$ret = "";
+		$arrEvent = array();
+		
+		$this->staticDebug("function buildTemplateInMemory (wiki db lookup)");
+
+		$articleName = $pagename . "/" . $month . "-" . $year . " -Template";
+		$article = new Article(Title::newFromText($articleName));
+
+		if ($article->exists()) {
+			$displayText  = $article->fetchContent(0,false,false);
+		}
+
+		$arrAllEvents=split(chr(10),$displayText);
+		if (count($arrAllEvents) > 0){
+			for($i=0; $i<count($arrAllEvents); $i++){
+				$arrEvent = split("#",$arrAllEvents[$i]);
+				if(strlen($arrEvent[1]) > 0){
+					$day = $arrEvent[0];
+					$arrRepeat = split("-",$arrEvent[0]);
+					if(count($arrRepeat) > 1){
+						$day = $arrRepeat[0];
+						while($day <= $arrRepeat[1]){
+							$this->arrTemplates[] = $month . "`" . $day . "`" . $year . "`<li>" . $this->articleLink($articleName, $arrEvent[1]) . "</li>";
+							$day++;
+						}
+					}else
+						$this->arrTemplates[] = $month . "`" . $day . "`" . $year . "`<li>" . $this->articleLink($articleName, $arrEvent[1]) . "</li>";	
+				}
+			}
+		}
+		return $ret;		
+	}
+	
+	// read events that are sitting in memory
+	function getTemplateEvents($month, $day, $year){
+		$this->staticDebug("function getTemplateEvents");
+		
+		$ret = "";
+		$count = 0;
+		
+		while($count < count($this->arrTemplates)){
+			$arrEvent = split("`", $this->arrTemplates[$count]);
+			if(($month == $arrEvent[0]) && ($day == $arrEvent[1]) && ($year == $arrEvent[2])){
+				$ret .= $arrEvent[3];
+			}
+			$count++;
+		}
+
+		return $ret;
+	}
 
 	function buildAlertLink($day, $month){
 		$ret = "";
+		$this->staticDebug("function buildAlertLink");
 	
 		$alerts = $this->arrAlerts;
 		$alertList = "";
@@ -307,46 +422,12 @@ class Calendar extends CalendarArticles
 
 		return $ret;
 	}
-	
-	// build the 'template' button	
-	function buildTemplateLink(){	
-	
-		if(!$this->enableTemplates) return "";
-		
-		$articleName = $this->wikiRoot . $this->calendarPageName . "/" . $this->month . "-" . $this->year . " -Template&action=edit" . "';\">";
 
-		$month = strtolower($this->monthNames[$this->month-1]);
-		if($this->lockTemplates)
-			$ret = "<input type='button' title='Create a bunch of events in one page (20-25# Vacation)' disabled value='$month events' onClick=\"javascript:document.location='" . $articleName;
-		else
-			$ret = "<input type='button' title='Create a bunch of events in one page (20-25# Vacation)' value='$month events' onClick=\"javascript:document.location='" . $articleName;
-		
-		return $ret;			
-	}
-	
-	function initNewPage($title, $text){
-		$mytitle = Title::newFromText($title);
-		$article = new Article($mytitle);
-		$res = $article->doEdit($text . "<!-- -->", '');
-	}
-
-	// build the 'template' button	
-	function buildConfigLink($bTextLink = false){	
-		
-		if($this->disableConfigLink) return "";
-		
-		if(!$bTextLink){
-			$articleConfig = $this->wikiRoot . $this->configPageName . "&action=edit" . "';\">";
-			$ret = "<input type='button' title='Add calendar parameters here' value='config' onClick=\"javascript:document.location='" . $articleConfig;
-		}else
-			$ret = "<a href='" . $this->wikiRoot . $this->configPageName . "&action=edit'>(config...)</a>";
-
-		return $ret;			
-	}
-	
     function getHTMLForMonth() {   
 		
 		$tag_templateButton = "";
+		
+		$this->staticDebug("function getHTMLForMonth");
        	
 	    /***** Replacement tags *****/
 
@@ -365,7 +446,6 @@ class Calendar extends CalendarArticles
 		$tag_eventStyleButton = "";		// event style buttonn [[EventStyleBtn]]
 		$tag_templateButton = "";		// template button for multiple events [[TemplateButton]]
 		$tag_todayButton = "";			// today button [[TodayButton]]
-		$tag_configButton = ""; 		// config page button
         
 	    /***** Calendar parts (loaded from template) *****/
 
@@ -434,14 +514,19 @@ class Calendar extends CalendarArticles
 	    }
 	    $tag_yearSelect .= "</select>";
     	
-
-		$tag_templateButton = $this->buildTemplateLink();
-		$tag_configButton = $this->buildConfigLink(false);
-		$tag_timeTrackValues = $this->buildTrackTimeSummary();
-
+		if($this->enableTemplates){
+			// build the 'template' button
+			$articleName = $this->wikiRoot . $this->calendarPageName . "/" . $this->month . "-" . $this->year . " -Template&action=edit" . "';\">";
+			
+			if($this->lockTemplates)
+				$tag_templateButton = "<input type=\"button\" title=\"Create a bunch of events in one page (20-25# Vacation)\" disabled value= \"template load\" onClick=\"javascript:document.location='" . $articleName;
+			else
+				$tag_templateButton = "<input type=\"button\" title=\"Create a bunch of events in one page (20-25# Vacation)\" value= \"template load\" onClick=\"javascript:document.location='" . $articleName;
+		}
+	
 		if(!$this->disableStyles){
 			$articleStyle = $this->wikiRoot . $this->calendarPageName . "/style&action=edit" . "';\">";
-			$tag_eventStyleButton = "<input type=\"button\" title=\"Set 'html/css' styles based on trigger words (vacation::color:red; font-style:italic)\" value= \"event styles\" onClick=\"javascript:document.location='" . $articleStyle;
+			$tag_eventStyleButton = "<input type=\"button\" title=\"Set event colors based on trigger words (red::vacation)\" value= \"event styles\" onClick=\"javascript:document.location='" . $articleStyle;
 		}
 		
 		// build the hidden calendar date info (used to offset the calendar via cookies)
@@ -532,8 +617,6 @@ class Calendar extends CalendarArticles
 		$tempString = str_replace("[[TemplateButton]]", $tag_templateButton, $tempString);
 		$tempString = str_replace("[[EventStyleBtn]]", $tag_eventStyleButton, $tempString);
 		$tempString = str_replace("[[Version]]", $this->version, $tempString);
-		$tempString = str_replace("[[ConfigurationButton]]", $tag_configButton, $tempString);
-		$tempString = str_replace("[[TimeTrackValues]]", $tag_timeTrackValues, $tempString);
 		
 	    $ret .= $tempString;
   		
@@ -549,7 +632,8 @@ class Calendar extends CalendarArticles
     // the returned results include the text between the search strings,
     // else an empty string will be returned if not found.
     function searchHTML($html, $beginString, $endString) {
-	
+		$this->staticDebug("function searchHTML");
+		
     	$temp = split($beginString, $html);
     	if (count($temp) > 1) {
 			$temp = split($endString, $temp[1]);
@@ -560,6 +644,7 @@ class Calendar extends CalendarArticles
     
     // strips the leading spaces and tabs from lines of HTML (to prevent <pre> tags in Wiki)
     function stripLeadingSpace($html) {
+		$this->staticDebug("function stripLeadingSpace");
 		
     	$index = 0;
     	
@@ -580,28 +665,140 @@ class Calendar extends CalendarArticles
 	
     // returns an array of existing article names for a specific day
     function getArticlesForDay($month, $day, $year) {
+		$this->staticDebug("function getArticlesForDay (wiki db lookup x 3)");
     	$articleName = "";    	// the name of the article to check for
-	
-		for ($i = 0; $i <= $this->maxDailyEvents; $i++) {
-			$articleName = $this->calendarPageName . "/" . $month . "-" . $day . "-" . $year . " -Event " . $i;	
-			$this->addArticle($month, $day, $year, $articleName, $this->summaryCharLimit);
+    	$articleCount = 0;    	// the article count
+    	$articleArray = array();    	// the array of article names
+
 		
+		for ($i = 0; $i <= $this->maxDailyEvents; $i++) {
+			$articleName = $this->calendarPageName . "/" . $month . "-" . $day . "-" . $year . " -Event " . $i;
+			$article = new Article(Title::newFromText($articleName));
+
+			if ($article->exists()) {
+				$articleArray[$articleCount] = $article;
+				$articleCount += 1;
+			}
+			
 			// subscribed events
 			for($s=0; $s < count($this->subscribedPages); $s++){
-				$articleName = $this->subscribedPages[$s] . "/" .  $month . "-" . $day . "-" . $year . " -Event " . $i;		
-				$this->addArticle($month, $day, $year, $articleName, $this->summaryCharLimit);				
-				
+				$articleName = $this->subscribedPages[$s] . "/" .  $month . "-" . $day . "-" . $year . " -Event " . $i;
+				$article = new Article(Title::newFromText($articleName));
+				if ($article->exists()) {
+					$articleArray[$articleCount] = $article;
+					$articleCount += 1;
+				}					
 			}
 			
 			// (* backwards compatibility only *)
 			// must use the name parameter even in fullsubscribe mode: <calendar name="Team" fullsubscribe="Main Page/Team" />
 			// if you dont, you will not get the older style events in your calendar...
 			$articleName = $this->calendarName . " (" . $month . "-" . $day . "-" . $year . ") - Event " . $i;
-			$this->addArticle($month, $day, $year, $articleName, $this->summaryCharLimit);
+			$article = new Article(Title::newFromText($articleName));
+			if ($article->exists()) {
+				$articleArray[$articleCount] = $article;
+				$articleCount += 1;
+			}
 		}
+
+		return $articleArray;
     }
 	
+    // returns the link for an article, along with summary in the title tag, given a name
+    function articleLink($title, $text){
+		$this->staticDebug("function articleLink");
+			
+		if(strlen($text)==0) return "";
+
+		$arrText = $this->buildTextAndHTMLString($text);
+		$style = $arrText[2];
+
+		//locked links
+		if($this->disableLinks)
+			$ret = "<a $style>" . $arrText[1] . "</a>";
+		else
+			if($this->defaultEdit)
+				$ret = "<a $style title='$arrText[0]' href='" . $this->wikiRoot  . htmlspecialchars($title) . "&action=edit'>$arrText[1]</a>";
+			else
+				$ret = "<a $style title='$arrText[0]' href='" . $this->wikiRoot . htmlspecialchars($title)  . "'>$arrText[1]</a>";
+
+		return $ret;
+    }
+
+	function buildTextAndHTMLString($string){
+		$this->staticDebug("function buildTextAndHTMLString");
+
+		$string = $this->cleanWiki($string);	
+		$htmltext = $string;
+		$plaintext = strip_tags($string);
+
+		if(strlen($plaintext) > $this->charLimit) {
+			$temp = substr($plaintext,0,$this->charLimit) . "..."; //plaintext
+			$ret[0] = $plaintext; //full plain text
+			$ret[1] = str_replace($plaintext, $temp, $htmltext); //html
+			$ret[2] = ""; //styles
+		}
+		else{
+			$ret[0] = $plaintext; //full plain text
+			$ret[1] = $htmltext;	
+			$ret[2] = ""; //styles
+		}
+		
+		if(!$this->disableStyles)
+			$ret[2] = $this->buildStyleBySearch($plaintext);
+		
+		return $ret;
+	}
+
+
+	function cleanWiki($text){
+		$this->staticDebug("function cleanWiki");
+
+		$text = $this->swapWikiToHTML($text, "'''", "b");
+		$text = $this->swapWikiToHTML($text, "''", "i");
+		$text = $this->swapWikiToHTML($text, "<pre>", "");
+		$text = $this->swapWikiToHTML($text, "</pre>", "");
+	
+		return $text;
+	}
+	
+	//basic tage changer for common wiki tags
+	function swapWikiToHTML($text, $tagWiki, $tagHTML){
+		$this->staticDebug("function swapWikiToHTML");
+		$ret = $text;
+		
+		$lenWiki = strlen($tagWiki);
+		$pos = strpos($text, $tagWiki);
+		if($pos !== false){
+			if($tagHTML != ""){
+				$ret = substr_replace($text, "<$tagHTML>", $pos, $lenWiki);
+					$ret = str_replace($tagWiki, "</$tagHTML>", $ret);
+			}
+			else
+				$ret = str_replace($tagWiki, "", $ret);
+		}
+		
+		return $ret;
+	}
+	
+	function buildStyleBySearch($text){
+		$this->staticDebug("function buildStyleBySearch");
+		
+		$ret = "";
+		for($i=0; $i < count($this->arrStyle); $i++){
+			$arr = split("::", $this->arrStyle[$i]);
+			$cnt = count($arr);
+			
+			if(stripos($text, $arr[0]) !== false)
+				$ret = "style='" . trim($arr[1]) . "' ";
+		}
+
+		return $ret;
+	}
+	
 	function readStylepage(){
+		$this->staticDebug("function getStyles");
+		
 		$articleName = $this->calendarPageName . "/" . "style";	
 		$article = new Article(Title::newFromText($articleName));
 
@@ -609,7 +806,47 @@ class Calendar extends CalendarArticles
 			$displayText  = $article->fetchContent(0,false,false);	
 			$this->arrStyle = split(chr(10), $displayText);
 		}
-	}	
+	}
+	
+    function getSummariesForArticle($article, $day, $month) {
+		$this->staticDebug("function getSummariesForArticle");
+		/* $title = the title of the wiki article of the event.
+		 * $displayText = what is displayed
+		 */
+		$redirectCount = 0;
+		while($article->isRedirect() && $redirectCount < 5){
+			$redirectedArticleTitle = Title::newFromRedirect($article->getContent());
+			$article = new Article($redirectedArticleTitle);
+			$redirectCount += 1;
+		}
+		
+		$title        = $article->getTitle()->getPrefixedText(); //full title with namespace,title,name and date
+		$displayText  = $article->fetchContent(0,false,false);
+
+		// $displayText is the text that is displayed for the article.
+		// if it has any ==headings==, return an array of them.
+		// otherwise return the first line.
+		
+		$ret = array();
+		$lines = split("\n",$displayText);
+		for($i=0;$i<count($lines);$i++){
+			$line = $lines[$i];
+			if(substr($line,0,2)=='=='){
+				$head = split("==",$line);
+				$ret[count($ret)] = $this->articleLink($title,$head[1],$displayText);
+			}
+			elseif ($i == 0 && $this->useMultiEvent && strlen($line) > 0){
+				$ret[count($ret)] = $this->articleLink($title,"error: (==event==)",$displayText);
+				$this->createAlert($day, $month, $this->errMultiday);
+			}
+		}
+		
+		if(count($ret)==0){
+			$ret[0] = $this->articleLink($title,$lines[0],$displayText);
+		}
+
+		return $ret;
+	}		
 	
 	// Set/Get accessors
 	function setMonth($month) { $this->month = $month; } /* currently displayed month */
@@ -620,53 +857,29 @@ class Calendar extends CalendarArticles
 	function createAlert($day, $month, $text){$this->arrAlerts[] = $day . "-" . $month . "-" . $text . "\\n";}
 }
 
- function function_defining_magic_words( &$magicWords, $langCode ) {
- 
-	
-     $magicWords['magic_word_id'] = array( 0, 'function_name_in_wikitext' );
-     return true; // unless we return true, other parser function extensions won't get loaded.
- }
-
 // called to process <Calendar> tag.
 function displayCalendar($paramstring = "", $params = array()) {
     global $wgParser;
 	global $wgScript;
 	global $wgCalendarPath;
 	global $wgTitle;
-	global $wgOut, $wgRequest;
-
-	$debug = "";
-	
     $wgParser->disableCache();
-	$wikiRoot = $wgScript . "?title=";
+
+	$calendar = null;	
+	$calendar = new Calendar($wgCalendarPath);
 	
 	// grab the page title
 	$title = $wgTitle->getPrefixedText();
-	$name = "Public";		
 	
-	if(isset($params["debug"])) $debug = true;
-	if(isset($params["name"])) if($params["name"] != "name") $name = $params["name"];	
-
-	$name = checkForMagicWord($name);
+	// $wgScript == '/mediawiki/index.php'
+	// depending on the server config, this 'wikiRoot' could be modified to adjust all links created in the codebase
+	// apparently, this could be configured as "/mediawiki/Event1" instead of "/mediawiki/index.php?title=Event1"
+	$calendar->wikiRoot = $wgScript . "?title=";
 	
-	$calendar = null;	
-	$calendar = new Calendar($wgCalendarPath, $wikiRoot, $debug);
+	$name = "Public";	
 	
-	// normal calendar...
-	$calendar->calendarPageName = htmlspecialchars($title . "/" . $name);
-	$calendar->configPageName = htmlspecialchars("$title/$name/config");
-	
-	if(isset($params["useconfigpage"])) {	
-		$configs = $calendar->getConfig("$title/$name");
-		$calendar->disableConfigLink = false;
-		
-		//merge the config page and the calendar tag params; tag params overwrite config file
-		$params = array_merge($configs, $params);	
-
-		if($params["useconfigpage"] == "disablelink") $calendar->disableConfigLink = true;
-	}
-		
     // check for user set parameters
+	if(isset($params["debug"])) $calendar->debugEnabled = true;	
 	if(isset($params["disableaddevent"])) $calendar->showAddEvent = false;	
     if(isset($params["usetemplates"])) $calendar->enableTemplates = true;
     if(isset($params["defaultedit"])) $calendar->defaultEdit = true;
@@ -674,35 +887,28 @@ function displayCalendar($paramstring = "", $params = array()) {
 	if(isset($params["usemultievent"])) $calendar->useMultiEvent = true; 
 	if(isset($params["locktemplates"])) $calendar->lockTemplates = true; 
 	if(isset($params["disablestyles"])) $calendar->disableStyles = true; 
-	if(isset($params["timetrackhead"])) $calendar->timeTrackHead = $params["timetrackhead"];
+	if(isset($params["debug"])) if(strlen($params["debug"]) > 0) $calendar->debugLevel = ($params["debug"]);
+	if(isset($params["yearoffset"])) if(strlen($params["yearoffset"]) > 0) $calendar->setYearsOffset($params["yearoffset"]);
+	if(isset($params["charlimit"])) if(strlen($params["charlimit"]) > 0) $calendar->charLimit = ($params["charlimit"]);
+	if(isset($params["name"])) if(strlen($params["name"]) > 0) $name = $params["name"];
+	if(isset($params["maxdailyevents"])) if(strlen($params["maxdailyevents"]) > 0) $calendar->maxDailyEvents = $params["maxdailyevents"];
 	
-	if(isset($params["date"])) 
-		if($params["date"] != "date") $dateValue = $params["date"];
-	if(isset($params["useeventlist"])) 
-		if($params["useeventlist"] != "useeventlist") $eventListDays = $params["useeventlist"];
-	if(isset($params["yearoffset"])) 
-		if($params["yearoffset"] != "yearoffset") $calendar->setYearsOffset($params["yearoffset"]);
-	if(isset($params["charlimit"])) 
-		if($params["charlimit"] != "charlimit") $calendar->charLimit = ($params["charlimit"]);		
-	if(isset($params["maxdailyevents"])) 
-		if($params["maxdailyevents"] != "maxdailyevents") $calendar->maxDailyEvents = $params["maxdailyevents"];
-	if(isset($params["enablesummary"]))
-		if($params["enablesummary"] != "enablesummary") $calendar->summaryCharLimit = $params["enablesummary"];		
-
 	// no need to pass a parameter here... isset check for the params name, thats it
-	if(isset($params["lockdown"]) || isset($lockdown)){
+	if(isset($params["lockdown"])){
 		$calendar->showAddEvent = false;
 		$calendar->disableLinks = true;
 		$calendar->lockTemplates = true;
 	}
+	// normal calendar...
+	$calendar->calendarPageName = htmlspecialchars($title . "/" . $name);
 	
 	// joint calendar...pulling data from our calendar and the subscribers...ie: "title/name" format
 	if(isset($params["subscribe"])) 
-		if($params["subscribe"] != "subscribe") $calendar->subscribedPages = split(",", $params["subscribe"]);
+		if(strlen($params["subscribe"]) > 0) $calendar->subscribedPages = split(",", $params["subscribe"]);
 
 	// subscriber only calendar...basically, taking the subscribers identity fully...ie: "title/name" format
 	if(isset($params["fullsubscribe"])) 
-		if($params["fullsubscribe"] != "fullsubscribe") $calendar->calendarPageName = htmlspecialchars($params["fullsubscribe"]);
+		if(strlen($params["fullsubscribe"]) > 0) $calendar->calendarPageName = htmlspecialchars($params["fullsubscribe"]);
 
 	//calendar name itself (this is only for (backwards compatibility)
 	$calendar->calendarName = htmlspecialchars("CalendarEvents:" .$name);
@@ -715,7 +921,7 @@ function displayCalendar($paramstring = "", $params = array()) {
 
     // read the cookie to pull last calendar data
     $cookie_name = 'calendar_' . str_replace(' ', '_', $title) . str_replace(' ', '_', $name);
-    if (isset($_COOKIE[$cookie_name]) && !isset($eventListDays) && !isset($dateValue)){
+    if (isset($_COOKIE[$cookie_name]) && !isset($params["date"]) && !isset($params["useeventlist"])){
 		$temp = split("`", $_COOKIE[$cookie_name]);
 		$calendar->setMonth($temp[0]);
 		$calendar->setYear($temp[1]);
@@ -726,32 +932,27 @@ function displayCalendar($paramstring = "", $params = array()) {
 	//this must go after the cookie checks because of the saved date in the cookie
 	if($calendar->enableTemplates){
 		$year = $calendar->year;
-		$month = 1;//$calendar->month;
-			
-		$additionMonths = $calendar->month + 12;
+		$month = $calendar->month;
 			
 		// lets just grab the next 12 months...this load only takes about .01 second per subscribed calendar
-		for($i=0; $i < $additionMonths; $i++){ // loop thru 12 months
+		for($i=0; $i < 12; $i++){ // loop thru 12 months
 			for($s=0;$s < count($calendar->subscribedPages);$s++) //loop thru $i month per subscribed calendar
-				$calendar->addTemplate($month, $year, ($calendar->subscribedPages[$s]));
+				$calendar->buildTemplateInMemory($month, $year, ($calendar->subscribedPages[$s]));
 			
-			$calendar->addTemplate($month, $year, ($calendar->calendarPageName));		
+			$calendar->buildTemplateInMemory($month, $year, ($calendar->calendarPageName));		
 			$year = ($month == 12 ? ++$year : $year);
 			$month = ($month == 12 ? 1 : ++$month);
 		}
 	}
-	
+
 	// normal month mode
-	if(!isset($eventListDays)  && !isset($dateValue)){
-		$calendar->calendarMode = "normal";
-		$calendar->debug("End Calendar Normal/Full Mode");
-		return "<html>" . $calendar->getHTMLForMonth() . "</html>" . $calendar->getDebugging();
-		}
+	if(!isset($params["date"]) && !isset($params["useeventlist"])) 
+			return "<html>" . $calendar->getHTMLForMonth() . "</html>" . $calendar->getDebugging();
 
 	// event list mode
-	if(isset($eventListDays)){
-		$calendar->calendarMode = "eventlist";
-		$daysOut = ($eventListDays <= 120 ? $eventListDays : 120);
+	if(strlen($params["useeventlist"]) > 0){
+		$calendar->useEventList = true;
+		$daysOut = ($params["useeventlist"] <= 120 ? $params["useeventlist"] : 120);
 		
 		$month = $calendar->month;
 		$day = $calendar->day;
@@ -773,18 +974,17 @@ function displayCalendar($paramstring = "", $params = array()) {
 			}
 		}
 		if(strlen($calendar->eventList) == 0)
+			//$calendar->eventList = "<h4>No Events for<br/>the next " . $daysOut . " days</h4>";
 			$calendar->eventList = "<h4>No Events</h4>";
-			
-		$calendar->debug("End Calendar EventList Mode");
-		return "<html><i> " . $calendar->buildConfigLink(true) . "</i>" .  $calendar->eventList . "</html>" . $calendar->getDebugging();
+		return "<html>" . $calendar->eventList . "</html>" . $calendar->getDebugging();
 	}
 	
     // specific date mode
-    if (isset($dateValue)) {
-		$calendar->calendarMode = "date";
+    if (strlen($params["date"]) > 0) {
+		$calendar->dateEnabled = true;
 		$calendar->charLimit = 100;
-		if (($dateValue  == "today") || ($dateValue == "tomorrow")){
-			if ($dateValue == "tomorrow" ){
+		if (($params["date"] == "today") || ($params["date"]=="tomorrow")){
+			if ($params["date"] == "tomorrow" ){
 				$calendar->day++;
 				
 				//lets check for overlap to next month or next year...
@@ -800,25 +1000,23 @@ function displayCalendar($paramstring = "", $params = array()) {
 			}
 		}
 		else {
-			$useDash = split("-",$dateValue);
-			$useSlash = split("/",$dateValue);
+			$useDash = split("-",$params["date"]);
+			$useSlash = split("/",$params["date"]);
 			$parseDate = (count($useDash) > 1 ? $useDash : $useSlash);
 			if(count($parseDate) == 3){
 				$calendar->month = $parseDate[0];
 				$calendar->day = $parseDate[1] + 0; // converts to integer
 				$calendar->year = $parseDate[2] + 0;
 			}
-//			else //format error, return
-//				return "<html><h2>Invalid Date Parameter. Valid formats are (mm/dd/ccyy) or (mm-dd-ccyy)</h2></html>";
+			else //format error, return
+				return "<html><h2>Invalid Date Parameter. Valid formats are (mm/dd/ccyy) or (mm-dd-ccyy)</h2></html>";
 		}
-		
 		// build the "daily" view HTML if we have a good date
 		$html = "<table width=\"100%\"><h4>" 
 			. $calendar->monthNames[$calendar->month -1] . " "
 			. $calendar->day . ", "
 			. $calendar->year
-			. " <small><i>" . $calendar->buildConfigLink(true) . "</i></small></h4>" ;
-		$calendar->debug("End Calendar Single Day Mode");
+			. "</h4>";
 		return "<html>" . cleanDayHTML($html. $calendar->getHTMLForDay($calendar->month,$calendar->day,$calendar->year) 
 		. "</table></html>" 
 		. $calendar->getDebugging());	
@@ -826,22 +1024,6 @@ function displayCalendar($paramstring = "", $params = array()) {
 
 	return true;
 }
-
-function checkForMagicWord($string){
-	global $wgParser;
-	
-	$ret = $string;
-	$string = str_replace("{{","",$string);
-	$string = str_replace("}}","",$string);
-	$string = strtolower($string);
-
-	$string = $wgParser->getVariableValue($string);
-	
-	if(isset($string)) $ret = $string;
-	
-	return $ret;
-}
-
 function cleanDayHTML($tempString){
 	// kludge to clean classes from "day" only parameter; causes oddness if the main calendar
 	// was displayed with a single day calendar on the same page... the class defines carried over...
