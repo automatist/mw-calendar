@@ -6,10 +6,10 @@
 * MediaWiki: http://www.mediawiki.org/wiki/User:Kenyu73/Calendar
 -->
 __TOC__
-==Setup (v3.4.2)==
+==Setup (v3.5 Release) 1/11/2009==
 
 * It's recommended to create a custom calendar type Namespace, like '''Calendars''', but can be whatever Namespaces defined in LocalSettings.php or standard MediaWiki namespaces (like user namespaces) however, it's not required. It is recommended though so seaches in the main wiki do not included calendar events.
-** The easist way is to enter "Calendars:My Calendar Name" in the search box to create the main base calendar page.
+** The easist way is to enter "Calendars:PageName" in the search box to create the main base calendar page.
 * Add a <nowiki><calendar /></nowiki> extension tag to the newly create page (or existing page)
 * Add parameters as required (see below listing)
 
@@ -136,6 +136,26 @@ Please use quotes for any parameter that may contain a space
 |disablestyles
 |enabled, but does ''nothing'' until keyword styles are added
 |-
+|'''css=<value>'''
+|Choose a new color scheme for your calendar. The css pages are located in the css sub-folder
+|css="olive.css"
+|default.css
+|-
+|'''disabletimetrack'''
+|Time tracking is enabled by default and looks for double colons (::vacation-8)
+|disabletimetrack
+|enabled
+|-
+|'''enablerepeatevents'''
+|Repeating events are created using using (5# Vacation) with normal events. The code looks up the previous months and applies carry-over events to the current month... very time intensive. It double the calendar load time of its owns events as well as subscribed calendars.
+|enablerepeatevents
+|disabled
+|-
+|'''enablelegacy'''
+| Load events from the "CalanderEvents:Page/Title (12-1-2008) - Event 1" format. Effects performance some...
+|enablelegacy
+|disabled
+|-
 |'''lockdown'''
 |Basically puts the calendar into a read-only state; this includes 'disableaddevent', 'disablelinks' and 'locktemplates'
 |lockdown
@@ -168,7 +188,7 @@ The template button (if enabled) allows users to add a bunch of events into one 
 The day and the event '''must''' be seperated by an '#' as shown in the example. You can also create duplicated days. The days do not have to be in order
 
  <nowiki>
-1# red::Vacation
+1# Vacation
 2# Holiday
 7# Election Day
 7# Office Closed
@@ -212,10 +232,6 @@ The following are details of the administrator installation of this calendar ext
  $wgNamespacesWithSubpages[101] = true;
 The additional namespaces move all the events outside the "main" group... should clean the mess up some. If you have custom namespaces installed already, make sure you bump up the [100][101] values up accordingly.
 
-'''''optional overrides'''''<br/>
-Add the following to ''LocalSettings.php'' to override the default path of 'extensions/Calendar'. This is used to read the ''calendar_template.html'' file.
- $wgCalendarPath = "/var/www/extensions/Calendar/";
-        or
- $wgCalendarPath = "c:/extensions/";
+
 
 [[Extension:Calendar (Kenyu73)/Readme/beta | Beta Readme]]
