@@ -13,7 +13,7 @@
 if (isset($_POST["calendar_info"]) ){
 	
 	$today = getdate();    	// today
-	$temp = split("`", $_POST["calendar_info"]); // calling calendar info (name,title, etc..)
+	$temp = explode("`", $_POST["calendar_info"]); // calling calendar info (name,title, etc..)
 
 	// set the initial values
 	$month = $temp[0];
@@ -426,7 +426,7 @@ class Calendar extends CalendarArticles
 		$alerts = $this->arrAlerts;
 		$alertList = "";
 		for ($i=0; $i < count($alerts); $i++){
-			$alert = split("-", $alerts[$i]);
+			$alert = explode("-", $alerts[$i]);
 			if(($alert[0] == $day) && ($alert[1] == $month))
 				$alertList .= $alert[2];
 		}
@@ -624,8 +624,8 @@ class Calendar extends CalendarArticles
 			}
 		}
 		else {
-			$useDash = split("-",$setting);
-			$useSlash = split("/",$setting);
+			$useDash = explode("-",$setting);
+			$useSlash = explode("/",$setting);
 			$parseDate = (count($useDash) > 1 ? $useDash : $useSlash);
 			if(count($parseDate) == 3){
 				$this->month = $parseDate[0];
@@ -923,9 +923,9 @@ class Calendar extends CalendarArticles
     // else an empty string will be returned if not found.
     function searchHTML($html, $beginString, $endString) {
 	
-    	$temp = split($beginString, $html);
+    	$temp = explode($beginString, $html);
     	if (count($temp) > 1) {
-			$temp = split($endString, $temp[1]);
+			$temp = explode($endString, $temp[1]);
 			return $temp[0];
     	}
     	return "";
@@ -936,7 +936,7 @@ class Calendar extends CalendarArticles
 		
     	$index = 0;
     	
-    	$temp = split("\n", $html);
+    	$temp = explode("\n", $html); // from split
     	
     	$tempString = "";
     	while ($index < count($temp)) {
@@ -1035,16 +1035,16 @@ class Calendar extends CalendarArticles
 	
 	function buildTagEvents($paramstring){
 	
-		$events = split( "\n", trim($paramstring) );
+		$events = explode( "\n", trim($paramstring) );
 	
 		foreach($events as $event) {
-			$arr = split(':', $event);
+			$arr = explode(':', $event);
 			$date = array_shift($arr);
 			$event = array_shift($arr);
 			
 			$body = implode(':',$arr);
 			
-			$arrDate = split('-',$date);
+			$arrDate = explode('-',$date);
 			
 			// we must have a valid date to continue
 			if(count($arrDate) < 3 ) 
@@ -1478,7 +1478,7 @@ function displayCalendar($paramstring, $params = array()) {
 	
 	// joint calendar...pulling data from our calendar and the subscribers...ie: "title/name" format
 	if(isset($params["subscribe"])) 
-		if($params["subscribe"] != "subscribe") $calendar->subscribedPages = split(",", $params["subscribe"]);
+		if($params["subscribe"] != "subscribe") $calendar->subscribedPages = explode(",", $params["subscribe"]);
 
 	// subscriber only calendar...basically, taking the subscribers identity fully...ie: "title/name" format
 	if( isset($params["fullsubscribe"]) ) {
@@ -1504,7 +1504,7 @@ function displayCalendar($paramstring, $params = array()) {
 	if(isset($_COOKIE[$cookie_name])){
 		$calendar->debug->set('cookie loaded');
 
-		$arrSession = split("`", $_COOKIE[$cookie_name]);
+		$arrSession = explode("`", $_COOKIE[$cookie_name]);
 		$calendar->setMonth($arrSession[0]);
 		$calendar->setDay($arrSession[1]);
 		$calendar->setYear($arrSession[2]);	

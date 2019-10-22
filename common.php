@@ -153,7 +153,7 @@ class Common{
 			
 		default:
 			//return $wgLang->iconv("", "UTF-8", Common::translate($value));
-			return utf8_encode(wfMsg($value));
+			return utf8_encode(wfMessage($value)->text());
 		}
 		return "";
 	}

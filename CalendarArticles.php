@@ -6,7 +6,17 @@
  
  */
  require_once ("common.php");
- 
+
+// Added utility function to replace deprecated calls to $article->fetchContent()
+// See: https://www.mediawiki.org/wiki/Manual:WikiPage.php
+// nb: old calls were of the form $article->fetchContent(0, false, false);
+// not 100% sure this is equivilent
+function fetchContent ($article) {
+	$content = $article->getPage()->getContent();
+	$text = ContentHandler::getContentText( $content );
+	return $text;
+}
+
  class CalendarArticle
  {
          var $day = "";
@@ -57,12 +67,11 @@
 			 $article = new Article($redirectedArticleTitle);
 			 $redirectCount += 1;
 		 }
-
-		$body = $article->fetchContent(0,false,false);
+		$body = fetchContent($article);
 	
 		if(strlen(trim($body)) == 0) return "";
 		
-		$lines = split("\n",$body);
+		$lines = explode("\n",$body);
 		$cntLines = count($lines);
 	
 		// dont use section events... only line 1 of the page
@@ -75,7 +84,7 @@
 		for($i=0; $i<$cntLines; $i++){
 			$line = $lines[$i];
 			if(substr($line,0,2) == '=='){
-				$arr = split("==",$line);
+				$arr = explode("==",$line);
 				$key = $arr[1];
 				$head[$key] = ""; $temp = "";
 			}
@@ -106,7 +115,7 @@
 		}
 
 		//check for repeating events
-		$arrEvent = split("#",$event);
+		$arrEvent = explode("#",$event);
 		if( isset($arrEvent[1]) && ($arrEvent[0] != 0) && $this->setting('enablerepeatevents') ){
 			for($i=0; $i<$arrEvent[0]; $i++) {
 				$this->add($month, $day, $year, $arrEvent[1], $page, $body, false, true);
@@ -202,18 +211,18 @@
 
 		if (!$article->exists()) return "";
 		
-		$displayText  = $article->fetchContent(0,false,false);
+		$displayText = fetchContent($article);
 	
-		$arrAllEvents=split(chr(10),$displayText);
+		$arrAllEvents=explode(chr(10),$displayText);
 		if (count($arrAllEvents) > 0){
 			for($i=0; $i<count($arrAllEvents); $i++){
-				$arrEvent = split("#",$arrAllEvents[$i]);
+				$arrEvent = explode("#",$arrAllEvents[$i]);
 				
 				if(!isset($arrEvent[1])) continue;//skip 
 				
 				if(strlen($arrEvent[1]) > 0){
 					$day = $arrEvent[0];
-					$arrRepeat = split("-",$arrEvent[0]);
+					$arrRepeat = explode("-",$arrEvent[0]);
 					
 					if(count($arrRepeat) > 1){
 						$day = $arrRepeat[0];
@@ -277,11 +286,11 @@
 		if((stripos($event,"::") === false) || $this->setting('disabletimetrack'))
 			return $event;
 		
-		$arrEvent = split("::", $event);
+		$arrEvent = explode("::", $event);
 		
-		$arrType = split(":",$arrEvent[1]);
+		$arrType = explode(":",$arrEvent[1]);
 		if(count($arrType) == 1)
-			$arrType = split("-",$arrEvent[1]);
+			$arrType = explode("-",$arrEvent[1]);
 		
 		if(count($arrType) != 2) return $event;
 		
@@ -310,7 +319,7 @@
 
 		if($cntValue == 0) return "";
 	
-		$cntHead = split(",", $this->setting('timetrackhead',false));
+		$cntHead = explode(",", $this->setting('timetrackhead',false));
 		$linktitle = "Time summaries of time specific enties. Prefix events with :: to track time values.";
 		
 		$html_head = "<hr><table title='$linktitle' width=15% border=1 cellpadding=0 cellspacing=0><th>$cntHead[0]</th><th>$cntHead[1]</th>";
@@ -385,7 +394,7 @@
 		
 		// dont care about the articles here, just need to get next available article
 		while ($article->exists() && !$stop) {
-			$displayText  = $article->fetchContent(0,false,false);
+			$displayText  = fetchContent($article);
 			if(strlen($displayText) > 0){
 				$articleCount++;
 				$article = new Article(Title::newFromText($page . $articleCount));
@@ -404,8 +413,8 @@
 		$article = new Article(Title::newFromText($articleName));
 
 		if ($article->exists()){
-			$displayText  = $article->fetchContent(0,false,false);	
-			$this->arrStyle = split(chr(10), $displayText);
+			$displayText  = fetchContent($article);	
+			$this->arrStyle = explode(chr(10), $displayText);
 		}
 	}	
 	
@@ -417,14 +426,14 @@
 		$article = new Article(Title::newFromText($articleName));
 
 		if ($article->exists()){
-			$body  = $article->fetchContent(0,false,false);
+			$body  = fetchContent($article);
 			$body = str_replace("\"", "", $body);	
 
-			$arr = split("\n", $body);
+			$arr = explode("\n", $body);
 			$cnt = count($arr);
 
 			for($i=0; $i<$cnt; $i++){
-				$arrParams = split("=", $arr[$i]);
+				$arrParams = explode("=", $arr[$i]);
 				$key = trim($arrParams[0]);
 				
 				if($key != 'useconfigpage'){		// we dont want users to lock themselves out of the config page....		
@@ -496,7 +505,7 @@
 		$defaultStyle = $this->setting('style', false);
 		
 		for($i=0; $i < count($this->arrStyle); $i++){
-			$arr = split("::", $this->arrStyle[$i]);
+			$arr = explode("::", $this->arrStyle[$i]);
 			$cnt = count($arr);
 			
 			if(stripos($text, $arr[0]) !== false) {
@@ -528,7 +537,7 @@
 				$article->doEdit($body.$event, $summary, EDIT_UPDATE);
 			}
 			else{
-				$body  = trim($article->fetchContent(0,false,false));
+				$body  = trim(fetchContent($article));
 				if(strlen($body) > 0) $body = "$body\n\n";
 				$article->doEdit($body.$event, $summary, EDIT_UPDATE);
 			}
@@ -573,7 +582,7 @@
 				$ret = 1;
 			}
 			else{
-				$body  = trim($article->fetchContent(0,false,false));
+				$body  = trim(fetchContent($article));
 				if((stripos($body, $rrule) === false)){ 	// lets not re-add duplicate rrule lines
 					$article->doEdit("$body\n" . "$rrule", $summary, EDIT_UPDATE);
 					$ret = 1;
@@ -599,7 +608,7 @@
 		$bExists = $article->exists();
 		
 		if($bExists){
-			$body  = trim($article->fetchContent(0,false,false));
+			$body  = trim(fetchContent($article));
 			$arrRRULES = $this->convertRRULEs($body);
 		} else return;
 
@@ -662,15 +671,15 @@
 	
 	// converts an RRULE line into an easy to use 2d-array
 	function convertRRULEs($rrules){
-		$arr_rrules = split("RRULE:", $rrules);
+		$arr_rrules = explode("RRULE:", $rrules);
 
 		$events = array();
 		array_shift($arr_rrules); //1st array[0] is garbage because RRULE: in position 0(1st)
 		
 		foreach($arr_rrules as $rule){
-			$arr_properties = split(";", $rule);
+			$arr_properties = explode(";", $rule);
 			foreach($arr_properties as $property){
-				$arr_rule = split("=", $property);
+				$arr_rule = explode("=", $property);
 				$rules[$arr_rule[0]] = $arr_rule[1]; //key and value
 			}
 			
