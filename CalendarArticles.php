@@ -17,6 +17,12 @@ function fetchContent ($article) {
 	return $text;
 }
 
+# ripped from https://doc.wikimedia.org/mediawiki-core/REL1_23/php/Title_8php_source.html#l00460
+function newFromRedirect($text) {
+	$content = ContentHandler::makeContent( $text, null, CONTENT_MODEL_WIKITEXT );
+	return $content->getRedirectTarget();
+}
+
  class CalendarArticle
  {
          var $day = "";
@@ -63,7 +69,7 @@ function fetchContent ($article) {
 		if( $article->isRedirect() && $this->setting('disableredirects') ) return '';
 		
 		 while($article->isRedirect() && $redirectCount < 10){
-			 $redirectedArticleTitle = Title::newFromRedirect($article->getContent());
+			 $redirectedArticleTitle = newFromRedirect($article->getContent());
 			 $article = new Article($redirectedArticleTitle);
 			 $redirectCount += 1;
 		 }
