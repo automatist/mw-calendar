@@ -112,7 +112,7 @@ function wfCalendarExtension() {
 	global $wgParser, $wgHooks;
 	global $wgCalendarSidebarRef;
 	$wgParser->setHook( "calendar", "displayCalendar" );
-	wfLoadExtensionMessages( 'wfCalendarExtension' ); 
+	// wfLoadExtensionMessages( 'wfCalendarExtension' ); 
  //   if ( isset($wgCalendarSidebarRef) ) $wgHooks['SkinTemplateOutputPageBeforeExec'][] = 
 //		'wfCalendarSkinTemplateOutputPageBeforeExec';
 }
