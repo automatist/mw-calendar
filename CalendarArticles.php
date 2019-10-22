@@ -69,7 +69,7 @@ function newFromRedirect($text) {
 		if( $article->isRedirect() && $this->setting('disableredirects') ) return '';
 		
 		 while($article->isRedirect() && $redirectCount < 10){
-			 $redirectedArticleTitle = newFromRedirect($article->getContent());
+			 $redirectedArticleTitle = newFromRedirect($article->getPage()->getContent());
 			 $article = new Article($redirectedArticleTitle);
 			 $redirectCount += 1;
 		 }
