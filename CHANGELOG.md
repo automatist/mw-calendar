@@ -11,3 +11,5 @@ May 2020
             $this->addArticle($month, $day, $year, strval($page));
         }
 ```
+
+TODO: check for more deprecated functions!!!
