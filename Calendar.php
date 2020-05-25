@@ -9,6 +9,8 @@
  * See Readme file for full details
  */
 
+use MediaWiki\MediaWikiServices;
+
 // this is the "refresh" code that allows the calendar to switch time periods
 if (isset($_POST["calendar_info"]) ){
 	
@@ -86,7 +88,7 @@ if (!defined('MEDIAWIKI')) {
 	die( 'This file is a MediaWiki extension, it is not a valid entry point' );
 }
 
-$gCalendarVersion = "v3.8.4+patched (8/18/2009+25/05/2020)";
+$gCalendarVersion = "v3.8.4+patched (8/18/2009+22/10/2019)";
 //$gCalendarVersion = "trunk/beta";
 
 # Credits	
@@ -974,19 +976,20 @@ class Calendar extends CalendarArticles
     // builds the day events into memory
 	// uses prefix seaching (NS:page/name/date)... anything after doesn't matter
     function buildArticlesForDay($month, $day, $year) {
-
-        //$date = "$month-$day-$year";
-        $date = $this->userDateFormat($month, $day, $year);
-        $search = "$this->calendarPageName/$date";
-        // PrefixSearch deprecated in 1.27, replaced with defaultPrefixSearch
-        // nb returned page is some kind of object, thus strval($page)
-        // $pages = PrefixSearch::titleSearch( $search, '100');
-        $searchEngine = MediaWikiServices::getInstance()->newSearchEngine();
-        $pages = $searchEngine->defaultPrefixSearch( $search );
-        foreach($pages as $page) {
-            $this->addArticle($month, $day, $year, strval($page));
-        }
-        unset ($pages);
+	
+		//$date = "$month-$day-$year";
+		$date = $this->userDateFormat($month, $day, $year);
+		
+		$search = "$this->calendarPageName/$date";
+		// PrefixSearch deprecated in 1.27, replaced with defaultPrefixSearch
+		// nb returned page is some kind of object, thus strval($page)
+		// $pages = PrefixSearch::titleSearch( $search, '100');
+		$searchEngine = MediaWikiServices::getInstance()->newSearchEngine();
+		$pages = $searchEngine->defaultPrefixSearch( $search );
+		foreach($pages as $page) {
+			$this->addArticle($month, $day, $year, strval($page));
+		}
+		unset ($pages);
 		
 		// subscribed events
 		foreach($this->subscribedPages as $subscribedPage){
