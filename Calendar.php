@@ -974,17 +974,19 @@ class Calendar extends CalendarArticles
     // builds the day events into memory
 	// uses prefix seaching (NS:page/name/date)... anything after doesn't matter
     function buildArticlesForDay($month, $day, $year) {
-	
-		//$date = "$month-$day-$year";
-		$date = $this->userDateFormat($month, $day, $year);
-		
-		$search = "$this->calendarPageName/$date";
-		$pages = PrefixSearch::titleSearch( $search, '100');
-		
-		foreach($pages as $page) {
-			$this->addArticle($month, $day, $year, $page);
-		}
-		unset ($pages);
+
+        //$date = "$month-$day-$year";
+        $date = $this->userDateFormat($month, $day, $year);
+        $search = "$this->calendarPageName/$date";
+        // PrefixSearch deprecated in 1.27, replaced with defaultPrefixSearch
+        // nb returned page is some kind of object, thus strval($page)
+        // $pages = PrefixSearch::titleSearch( $search, '100');
+        $searchEngine = MediaWikiServices::getInstance()->newSearchEngine();
+        $pages = $searchEngine->defaultPrefixSearch( $search );
+        foreach($pages as $page) {
+            $this->addArticle($month, $day, $year, strval($page));
+        }
+        unset ($pages);
 		
 		// subscribed events
 		foreach($this->subscribedPages as $subscribedPage){
