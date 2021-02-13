@@ -13,3 +13,13 @@ May 2020
 ```
 
 TODO: check for more deprecated functions!!!
+
+
+Febrary 2021
+=============
+
+* Replaced deprecated class constructors (with _ _ construct)
+* Replaced each for foreach
+* Commented out (thus disabling) the Common checkForMagicWord function -- not sure how to replace getVariableValue. There is an "expandMagicVariable" method in Parser, but it's private. Disabling the code has no visible effect on the usage of calendar I've tested (I don't recall any use of magic words in practice).
+
+
