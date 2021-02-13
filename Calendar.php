@@ -88,7 +88,7 @@ if (!defined('MEDIAWIKI')) {
 	die( 'This file is a MediaWiki extension, it is not a valid entry point' );
 }
 
-$gCalendarVersion = "v3.8.4+patched (8/18/2009+25/05/2020)";
+$gCalendarVersion = "v3.8.4+patched (13/02/2021)";
 //$gCalendarVersion = "trunk/beta";
 
 # Credits	
