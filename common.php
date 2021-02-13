@@ -12,7 +12,10 @@ class Common{
 		$string = str_replace("}}","",$string);
 		$string = strtolower($string);
 
-		$string = $wgParser->getVariableValue($string);
+		# https://doc.wikimedia.org/mediawiki-core/1.27.2/php/classParser.html
+		# https://doc.wikimedia.org/mediawiki-core/1.34.4/php/Parser_8php_source.html#l02824
+		# $string = $wgParser->getVariableValue($string);
+		# $string = $wgParser->expandMagicVariable($string);
 		
 		if(isset($string)) $ret = $string;
 		

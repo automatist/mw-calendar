@@ -34,7 +34,7 @@ function newFromRedirect($text) {
          var $html = ""; // html link displayed in calendar
 		 var $isImage = false;
          
-         function CalendarArticle($month, $day, $year){
+         function __construct($month, $day, $year){
                  $this->month = $month;
                  $this->day = $day;
                  $this->year = $year;    
@@ -106,7 +106,8 @@ function newFromRedirect($text) {
 			}
 		}
 
-		while (list($event,$body) = each($head)){
+		// while (list($event,$body) = each($head)){
+		foreach ($head as $event => $body){
 			$this->buildEvent($month, $day, $year, trim($event), $page, $body);
 		}
 	}
@@ -333,7 +334,8 @@ function newFromRedirect($text) {
 			. "(m) - total month only; doesn't add to year total <br/>"
 			. "(y) - total year; must use monthly templates<br/></small><br>";
 
-		while (list($key,$val) = each($this->arrTimeTrack)) {
+		// while (list($key,$val) = each($this->arrTimeTrack)) {
+		foreach ($this->arrTimeTrack as $key => $val) {
 			$ret .= "<tr><td align='center'>$key</td><td align='center'>" . array_sum($this->arrTimeTrack[$key]) . "</td></tr>";
 		}
 

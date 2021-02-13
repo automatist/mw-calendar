@@ -159,7 +159,7 @@ class Calendar extends CalendarArticles
 	var $invalidateCache = false;
 	var $isFullSubscribe = false;	
 										
-    function Calendar($wikiRoot, $debug) {
+    function __construct($wikiRoot, $debug) {
 		$this->wikiRoot = $wikiRoot;
 
 		$this->debug = new debugger('html');
@@ -1374,7 +1374,8 @@ function displayCalendar($paramstring, $params = array()) {
 	global $wgRestrictCalendarTo, $wgCalendarDisableRedirects;
 	global $wgCalendarForceNamespace, $wgCalendarDateFormat;
     
-	$wgParser->disableCache();
+	// $wgParser->disableCache(); // removed in Mediawiki 1.35
+	$wgParser->getOutput()->updateCacheExpiry(0);
 	$wikiRoot = $wgScript . "?title=";
 	$userMode = 'month';
 	

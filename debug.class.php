@@ -7,7 +7,7 @@ class debugger{
 	private $startTime = 0;
 	private $enabled = false;
 
-	function debugger($type){
+	function __construct($type){
 		$this->type = $type;
 		
 		$this->startTime = $this->markTime = microtime(1);
